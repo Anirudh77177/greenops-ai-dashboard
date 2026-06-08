@@ -14,17 +14,11 @@ model = joblib.load("model/co2e_model.pkl")
 
 @app.get("/health")
 def health():
-    """
-    Health Check Endpoint
-    """
     return {"status": "ok"}
 
 
 @app.get("/metrics/summary")
 def summary():
-    """
-    Summary Metrics
-    """
 
     total_co2e = round(df["co2e_kg"].sum(), 2)
     total_cost = round(df["cost_usd"].sum(), 2)
@@ -51,9 +45,6 @@ def summary():
 
 @app.get("/metrics/daily")
 def daily_metrics():
-    """
-    Daily CO2e Trend
-    """
 
     daily = (
         df.groupby("date")["co2e_kg"]
@@ -66,9 +57,6 @@ def daily_metrics():
 
 @app.get("/forecast")
 def forecast():
-    """
-    Forecast Endpoint
-    """
 
     daily = (
         df.groupby("date")["co2e_kg"]
@@ -96,4 +84,51 @@ def forecast():
 
     return {
         "forecast": predictions.tolist()
+    }
+
+
+@app.get("/green-score")
+def green_score():
+
+    daily = (
+        df.groupby("date")["co2e_kg"]
+        .sum()
+        .reset_index()
+    )
+
+    avg_daily = round(
+        daily["co2e_kg"].mean(),
+        2
+    )
+
+    if avg_daily < 2:
+        grade = "A"
+        action = "Excellent — no action needed"
+        gate = "PASS"
+
+    elif avg_daily < 5:
+        grade = "B"
+        action = "Good — minor optimisation advised"
+        gate = "PASS"
+
+    elif avg_daily < 10:
+        grade = "C"
+        action = "Moderate — review VM sizing"
+        gate = "PASS"
+
+    elif avg_daily < 20:
+        grade = "D"
+        action = "Immediate rightsizing required"
+        gate = "WARNING"
+
+    else:
+        grade = "F"
+        action = "Critical — pipeline soft gate triggered"
+        gate = "BLOCKED"
+
+    return {
+        "grade": grade,
+        "avg_daily_co2e": avg_daily,
+        "action": action,
+        "gate": gate
     }
